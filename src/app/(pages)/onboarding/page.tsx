@@ -42,8 +42,8 @@ export default function OnboardingPage() {
       setFormData(prev => ({
         ...prev,
         [name]: checkbox.checked
-          ? [...prev[name as keyof typeof formData], value]
-          : prev[name as keyof typeof formData].filter((item: string) => item !== value),
+          ? [...(prev[name as keyof typeof formData] as string[]), value]
+          : (prev[name as keyof typeof formData] as string[]).filter(item => item !== value)
       }))
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))

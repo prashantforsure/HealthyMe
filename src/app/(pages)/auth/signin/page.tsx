@@ -39,10 +39,10 @@ export default function SignInPage() {
                 <Feather className="mx-auto h-12 w-12 text-blue-600" />
               </motion.div>
               <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-                Sign in to Daily Journee
+                Sign in to HealthyMe
               </h2>
               <p className="mt-2 text-sm text-gray-600">
-                Start your journaling journey today
+                Start your healthy journey today
               </p>
             </div>
 
