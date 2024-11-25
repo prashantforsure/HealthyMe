@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         allergies,
         medicalHistory: JSON.stringify({
           conditions: medicalConditions,
-          medications: medications.split(',').map((med: string) => med.trim()),
+          medications: medications,
         }),
         activityLevel,
         sleepPattern: sleepHours,
