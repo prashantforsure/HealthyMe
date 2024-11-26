@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 
 export interface Meal {
@@ -21,25 +21,33 @@ export const useMealPlanData = (startDate: Date, endDate: Date) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const memoizedDates = useMemo(() => ({
+    start: startDate.toISOString(),
+    end: endDate.toISOString()
+  }), [startDate, endDate])
+
   useEffect(() => {
     const fetchMealPlans = async () => {
+      setLoading(true)
       try {
         const response = await axios.get('/api/meal-plans', {
           params: {
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
+            startDate: memoizedDates.start,
+            endDate: memoizedDates.end,
           },
         })
         setMealPlans(response.data)
+        setError(null)
       } catch (err) {
         setError('Failed to fetch meal plans')
+        setMealPlans([])
       } finally {
         setLoading(false)
       }
     }
 
     fetchMealPlans()
-  }, [startDate, endDate])
+  }, [memoizedDates])
 
   return { mealPlans, loading, error }
 }

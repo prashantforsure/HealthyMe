@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns'
 import { useMealPlanData, Meal, MealPlan } from '@/hooks/useMealPlanData'
@@ -17,8 +17,8 @@ import axios from 'axios'
 
 export default function MealPlansPage() {
   const [currentWeek, setCurrentWeek] = useState(new Date())
-  const startDate = startOfWeek(currentWeek)
-  const endDate = endOfWeek(currentWeek)
+  const startDate = useMemo(() => startOfWeek(currentWeek), [currentWeek])
+  const endDate = useMemo(() => endOfWeek(currentWeek), [currentWeek])
   const { mealPlans, loading, error } = useMealPlanData(startDate, endDate)
 
   const [selectedMealPlan, setSelectedMealPlan] = useState<MealPlan | null>(null)
@@ -35,7 +35,8 @@ export default function MealPlansPage() {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
       })
-     
+      // Refresh meal plans data after generation
+      // This could be optimized by updating the local state instead of refetching
       window.location.reload()
     } catch (error) {
       console.error('Failed to generate meal plan:', error)
@@ -53,7 +54,7 @@ export default function MealPlansPage() {
     if (window.confirm('Are you sure you want to delete this meal plan?')) {
       try {
         await axios.delete(`/api/meal-plans/${mealPlanId}`)
-  
+        // Refresh meal plans data after deletion
         window.location.reload()
       } catch (error) {
         console.error('Failed to delete meal plan:', error)
