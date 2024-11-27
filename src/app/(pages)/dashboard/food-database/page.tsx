@@ -113,13 +113,41 @@ export default function FoodDatabasePage() {
 
   const addFoodToDatabase = async (food: Food) => {
     try {
-      await axios.post('/api/usda/foods', food)
-      console.log('Food added to database')
+      // Prepare a complete food object that matches the schema
+      const foodData = {
+        fdcId: food.fdcId,
+        description: food.description,
+        dataType: food.dataType || undefined,
+        brandOwner: food.brandOwner || undefined,
+        gtinUpc: '', // Add if available
+        ingredients: '', // Add if available
+        servingSize: undefined, // Add if available
+        servingSizeUnit: undefined, // Add if available
+        nutritionData: {} // Optional nutrition data
+      }
+      
+      const response = await axios.post('/api/usda/foods', foodData, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      console.log('Food added to database:', response.data)
+      return response.data
     } catch (err) {
       console.error('Failed to add food to database:', err)
+      
+      // More detailed error handling
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 409) {
+          console.warn('Food item already exists in the database')
+        } else {
+          console.error('Error details:', err.response?.data)
+        }
+      }
+      throw err
     }
   }
-
+  
   return (
     <div className="min-h-screen bg-[#F8F9F9] p-8">
       <h1 className="text-4xl font-bold text-[#03363D] mb-8">Food Database</h1>
@@ -263,7 +291,7 @@ function FoodDetailsDialog({ food, onClose }: { food: FoodDetails; onClose: () =
               {food.nutrients.map((nutrient) => (
                 <TableRow key={nutrient.id}>
                   <TableCell>{nutrient.name}</TableCell>
-                  <TableCell>{nutrient.amount.toFixed(2)}</TableCell>
+                  <TableCell>{nutrient.amount}</TableCell>
                   <TableCell>{nutrient.unitName}</TableCell>
                 </TableRow>
               ))}

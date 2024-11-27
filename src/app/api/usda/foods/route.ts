@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import axios from 'axios'
 import prisma from '@/lib/prisma'
 import { authOptions } from '@/lib/auth/auth'
+import { z } from 'zod'
 
 const USDA_API_KEY = process.env.USDA_API_KEY
 const USDA_API_URL = 'https://api.nal.usda.gov/fdc/v1'
@@ -54,35 +55,75 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const food = await req.json()
-
-  try {
-    const newFood = await prisma.uSDAFoodItem.create({
-      data: {
-        fdcId: food.fdcId,
-        description: food.description,
-        dataType: food.dataType,
-        publicationDate: new Date(),
-        brandOwner: food.brandOwner,
-        gtinUpc: food.gtinUpc,
-        ingredients: food.ingredients,
-        servingSize: food.servingSize,
-        servingSizeUnit: food.servingSizeUnit,
-        nutritionData: food.nutritionData || {}
+const FoodItemSchema = z.object({
+    fdcId: z.union([z.string(), z.number()]).transform(val => String(val)),
+    description: z.string(),
+    dataType: z.string().optional(),
+    brandOwner: z.string().optional(),
+    gtinUpc: z.string().optional(),
+    ingredients: z.string().optional(),
+    servingSize: z.number().optional(),
+    servingSizeUnit: z.string().optional(),
+    nutritionData:z.any().optional()
+  })
+  
+  export async function POST(req: Request) {
+    const session = await getServerSession(authOptions)
+  
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  
+    try {
+      // Try to parse the request body
+      const body = await req.json()
+      
+      // Validate the input using Zod
+      const validatedFood = FoodItemSchema.parse(body)
+  
+      // Check if a food item with this fdcId already exists
+      const existingFood = await prisma.uSDAFoodItem.findUnique({
+        where: { fdcId: validatedFood.fdcId }
+      })
+  
+      if (existingFood) {
+        return NextResponse.json({ 
+          error: 'Food item with this FDC ID already exists', 
+          existingFood 
+        }, { status: 409 })
       }
-    })
-
-    return NextResponse.json(newFood)
-  } catch (error: any) {
-    console.error('Error adding food to database:', error)
-    return NextResponse.json({ error: 'Failed to add food to database', details: error.message }, { status: 500 })
+  
+      // Create the new food item
+      const newFood = await prisma.uSDAFoodItem.create({
+        data: {
+            fdcId: String(validatedFood.fdcId),
+          description: validatedFood.description,
+          dataType: validatedFood.dataType,
+          brandOwner: validatedFood.brandOwner,
+          gtinUpc: validatedFood.gtinUpc,
+          ingredients: validatedFood.ingredients,
+          servingSize: validatedFood.servingSize,
+          servingSizeUnit: validatedFood.servingSizeUnit,
+          nutritionData: validatedFood.nutritionData || null
+        }
+      })
+  
+      return NextResponse.json(newFood, { status: 201 })
+    } catch (error) {
+      console.error('Error adding food to database:', error)
+      
+      // Handle Zod validation errors
+      if (error instanceof z.ZodError) {
+        return NextResponse.json({ 
+          error: 'Validation failed', 
+          details: error.errors 
+        }, { status: 400 })
+      }
+  
+      // Handle other errors
+      return NextResponse.json({ 
+        error: 'Failed to add food to database', 
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 })
+    }
   }
-}
-

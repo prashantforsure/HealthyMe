@@ -197,14 +197,14 @@ model USDAFoodItem {
   id            String   @id @default(cuid())
   fdcId         String   @unique
   description   String
-  dataType      String
-  publicationDate DateTime
+  dataType      String?  // Made optional
+  publicationDate DateTime @default(now()) // Added default
   brandOwner    String?
   gtinUpc       String?
   ingredients   String?
   servingSize   Float?
   servingSizeUnit String?
-  nutritionData Json
+  nutritionData Json?    // Made optional
   usdafoodnurtrients USDAFoodNutrient[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
