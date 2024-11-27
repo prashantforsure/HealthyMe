@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useInView } from 'react-intersection-observer'
 import { motion } from 'framer-motion'
-import { Search, Plus, Info } from 'lucide-react'
+import { Search, Plus, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import axios from 'axios'
 import { debounce } from 'lodash'
 import { Input } from '@/components/ui/input'
@@ -16,7 +15,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   Table,
@@ -55,21 +53,17 @@ export default function FoodDatabasePage() {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
   const [selectedFood, setSelectedFood] = useState<FoodDetails | null>(null)
-
-  const { ref, inView } = useInView({
-    threshold: 0,
-  })
 
   const fetchFoods = useCallback(async (searchTerm: string, page: number) => {
     try {
+      setLoading(true)
       const response = await axios.get('/api/usda/foods', {
         params: { search: searchTerm, page, limit: 20 },
       })
-      const newFoods = response.data.foods
-      setFoods((prevFoods) => (page === 1 ? newFoods : [...prevFoods, ...newFoods]))
-      setHasMore(newFoods.length === 20)
+      setFoods(response.data.foods)
+      setTotalPages(Math.ceil(response.data.totalCount / 20))
       setError(null)
     } catch (err) {
       setError('Failed to fetch foods')
@@ -90,15 +84,22 @@ export default function FoodDatabasePage() {
     debouncedFetchFoods(searchTerm)
   }, [searchTerm, debouncedFetchFoods])
 
-  useEffect(() => {
-    if (inView && hasMore) {
-      setPage((prevPage) => prevPage + 1)
-      fetchFoods(searchTerm, page + 1)
-    }
-  }, [inView, hasMore, searchTerm, page, fetchFoods])
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value)
+  }
+
+  const handlePreviousPage = () => {
+    if (page > 1) {
+      setPage(prevPage => prevPage - 1)
+      fetchFoods(searchTerm, page - 1)
+    }
+  }
+
+  const handleNextPage = () => {
+    if (page < totalPages) {
+      setPage(prevPage => prevPage + 1)
+      fetchFoods(searchTerm, page + 1)
+    }
   }
 
   const fetchFoodDetails = async (fdcId: string) => {
@@ -113,7 +114,6 @@ export default function FoodDatabasePage() {
   const addFoodToDatabase = async (food: Food) => {
     try {
       await axios.post('/api/usda/foods', food)
-      // You might want to update the UI to reflect that the food has been added
       console.log('Food added to database')
     } catch (err) {
       console.error('Failed to add food to database:', err)
@@ -159,7 +159,27 @@ export default function FoodDatabasePage() {
       {!loading && foods.length === 0 && (
         <div className="text-center text-gray-500 mt-8">No foods found</div>
       )}
-      <div ref={ref} className="h-10" />
+      <div className="flex justify-between items-center mt-8">
+        <Button
+          onClick={handlePreviousPage}
+          disabled={page === 1}
+          className="bg-[#03363D] hover:bg-[#078080] text-white"
+        >
+          <ChevronLeft className="w-4 h-4 mr-2" />
+          Previous
+        </Button>
+        <span className="text-[#03363D]">
+          Page {page} of {totalPages}
+        </span>
+        <Button
+          onClick={handleNextPage}
+          disabled={page === totalPages}
+          className="bg-[#03363D] hover:bg-[#078080] text-white"
+        >
+          Next
+          <ChevronRight className="w-4 h-4 ml-2" />
+        </Button>
+      </div>
       {selectedFood && (
         <FoodDetailsDialog food={selectedFood} onClose={() => setSelectedFood(null)} />
       )}
