@@ -75,13 +75,10 @@ const FoodItemSchema = z.object({
     }
   
     try {
-      // Try to parse the request body
       const body = await req.json()
       
-      // Validate the input using Zod
       const validatedFood = FoodItemSchema.parse(body)
   
-      // Check if a food item with this fdcId already exists
       const existingFood = await prisma.uSDAFoodItem.findUnique({
         where: { fdcId: validatedFood.fdcId }
       })
@@ -112,7 +109,6 @@ const FoodItemSchema = z.object({
     } catch (error) {
       console.error('Error adding food to database:', error)
       
-      // Handle Zod validation errors
       if (error instanceof z.ZodError) {
         return NextResponse.json({ 
           error: 'Validation failed', 
@@ -120,7 +116,6 @@ const FoodItemSchema = z.object({
         }, { status: 400 })
       }
   
-      // Handle other errors
       return NextResponse.json({ 
         error: 'Failed to add food to database', 
         details: error instanceof Error ? error.message : 'Unknown error'

@@ -15,7 +15,6 @@ export async function GET(req: Request) {
   }
 
   try {
-    // First, try to fetch nutrients from our database
     const localNutrients = await prisma.uSDANutrient.findMany()
 
     if (localNutrients.length > 0) {
